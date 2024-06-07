@@ -1,0 +1,13 @@
+<h3>Você foi cadastrado no </h3>
+<span style="font-weight: 600">Restaurante:</span> {{companyName}}<br/>
+
+<h3>Seus Dados</h3>
+<span style="font-weight: 600">Nome:</span> {{name}}<br/>
+<span style="font-weight: 600">CPF:</span> {{cpf}}<br/>
+<div style="display:flex;padding:20px;font-weight:600;flex-direction:column;align-items:center;">
+    Código de confirmação<br>
+    <div style="height:100px;width:200px;align-items: center;justify-content: center;display:flex;font-weight:600;text-align:center;background-color:#e4dfdf;color:black;border-radius:8px;margin-bottom:30px">{{code}}</div>
+    <a href="{{link}}/sign-up/activate?code={{code}}" target="_blank"
+       class="link2"
+       style="text-decoration:none;color:#000000;">Clique aqui para validar seu cadastro</a>
+</div>

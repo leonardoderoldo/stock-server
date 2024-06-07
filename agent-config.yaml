@@ -1,0 +1,17 @@
+metrics:
+  global:
+    scrape_interval: 10s
+  configs:
+    - name: hosted-prometheus
+      scrape_configs:
+        - job_name: stock-server
+          static_configs:
+            - targets: ['localhost:8080']
+              labels:
+                service: stock-server
+                env: {{env}}
+      remote_write:
+        - url: https://prometheus-us-central1.grafana.net/api/prom/push
+          basic_auth:
+            username: {{username}}
+            password: {{password}}

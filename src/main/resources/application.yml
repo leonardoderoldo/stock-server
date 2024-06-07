@@ -1,0 +1,378 @@
+---
+server:
+  shutdown: graceful
+
+spring:
+  profiles:
+    active: ${app.environment}
+
+  jackson:
+    serialization:
+      fail-on-empty-beans: false
+
+  jpa:
+    show-sql: true
+
+  datasource:
+    name: stock-server
+    url: jdbc:postgresql://localhost:5432/stock-server
+    username: stock-server
+    password: stock-server
+    hikari:
+      maximum-pool-size: 50
+      data-source-properties:
+        reWriteBatchedInserts: true
+
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 300
+            read-timeout: 1000
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  mail:
+    properties:
+      mail:
+        smtp:
+          ssl:
+            enable: true
+          transport:
+            protocol: smtp
+          auth: true
+          starttls:
+            enable: true
+    protocol: smtp
+    host: email-ssl.com.br
+    port: 465
+    username: no-reply@deroldo.com.br
+    password: Deroldo@958632!!
+
+
+  sleuth:
+    baggage-keys: id,restaurant-id,enrollment-id
+    propagation-keys: id,restaurant-id,enrollment-id
+
+management:
+  endpoints:
+    web:
+      base-path: "/"
+      exposure:
+        include: prometheus,health,info,openapi,swagger-ui
+      path-mapping:
+        prometheus: metrics
+        health: health
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+  metrics:
+    data:
+      repository:
+        metric-name: repository_calls
+    distribution:
+      slo:
+        http_server_requests: ${app.metrics.histogram}
+        http_client_requests: ${app.metrics.histogram}
+        circuitbreaker_calls: ${app.metrics.histogram}
+        repository_calls: ${app.metrics.histogram}
+        internal_ops: ${app.metrics.histogram}
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+          client:
+            requests: true
+    enable:
+      all: true
+      jvm: true
+
+  observations:
+    http:
+      server:
+        requests:
+          name: http_server_requests
+      client:
+        requests:
+          name: http_client_requests
+
+  endpoint:
+    health:
+      validate-group-membership: false
+      probes:
+        enabled: true
+      group:
+        live:
+          include: livenessState
+        ready:
+          include: readnessState
+        complete:
+          include: diskSpace,livenessState,readnessState
+          show-components: always
+          show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+
+springdoc:
+  show-actuator: false
+  packages-to-scan: br.com.stock.server.controller
+  swagger-ui:
+    path: /docs
+
+logging:
+  pattern:
+    level: "%5p [${app.name},%X{traceId:-},%X{spanId:-}]"
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        register-health-indicator: true
+        sliding-window-type: time_based
+        sliding-window-size: 30
+        minimum-number-of-calls: 100
+        failure-rate-threshold: 20
+        permitted-number-of-calls-in-half-open-state: 15
+        automatic-transition-from-open-to-half-open-enabled: true
+        wait-duration-in-open-state: 5s
+        slow-call-rate-threshold: 95
+        slow-call-duration-threshold: 850ms
+
+app:
+  name: stock-server
+  environment: default
+
+  aws:
+    sns:
+      push-notification: push-notification-${app.environment}
+
+  payment-gateway:
+    cielo:
+      base-path-url: https://apisandbox.cieloecommerce.cielo.com.br
+      merchant-id: f0f3fe80-ef2d-4c06-8999-39ef133c3035
+      merchant-key: AIODJXZXZKPCBXIVBQDHRDRYIWYDJUNSAZBSMWDN
+
+  web:
+    cors:
+      default-origin: https://stock.com.br
+      allowed-origins:
+        - https://(.+\.)*stock.com.br
+        - http://localhost:3333
+        - http://localhost:3333/(.+\.)*
+
+  terms:
+    restaurant:
+      version: 1.0.0
+
+  firebase:
+    database:
+      url: https://stock-bdf91-default-rtdb.firebaseio.com/
+
+  metrics:
+    histogram: 5ms, 10ms, 25ms, 50ms, 100ms, 150ms, 250ms, 500ms, 1s, 3s, 5s, 10s
+
+  domain:
+    name: stock.com.br
+
+  images:
+    repository: local
+
+  push:
+    enabled: false
+
+  auth:
+    ignore-paths:
+      - "${springdoc.api-docs.path:/v3/api-docs}/**"
+      - "${springdoc.swagger-ui.path:/docs}"
+      - "/swagger-ui/**"
+      - "/partner/restaurant/signup"
+#      - "/employees/signup"
+      - "/employees/activate"
+      - "/employees/auth/login"
+      - "/employees/password/confirmation-data"
+      - "/employees/password/confirmation-code"
+      - "/employees/password/change"
+      - "/customer/signup"
+      - "/customer/activate"
+      - "/customer/auth/login"
+      - "/customer/password/confirmation-data"
+      - "/customer/password/confirmation-code"
+      - "/customer/password/change"
+      - "/site/contact"
+    jwt:
+      duration-in-minutes: 5
+      refresh-duration-after-token-expired-in-minutes: 2
+    service-shared-secret: service
+    fix-tools-shared-secret: fix-tools
+    jwt-public-key: |-
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvNBLyC3592bM8hHYNttb
+      RZbBgHBglt3A0643YZ/w7z1wmV6ZIOt9kKZgxcbEBDbtCUkY+orGACj9DNPN5jeT
+      14cB07URiX5ZQacY+d8d59FJs15zNPpcHyFwLDzk6Sf3NU7WeOxwsxcUUuKN+x5X
+      KvuQr6WvPEDHZPm61EuuaXAIbGuyBFBMNq1kR5GJiW///Ym7QJLoG1z2G7zh8oSM
+      pLgt5qdXCFUXuXeuHpbHPLTgAMO0Op4iA6LVgZzsjwMy4Aswt53a0sAfoTaDzXo5
+      zwmHR5mc6+8PA04K7CmmStYMDcs2GevUTtpSF2couNSioDOKkTeTSUbwuX28Z7Qe
+      EQIDAQAB
+      -----END PUBLIC KEY-----
+    jwt-private-key: |-
+      -----BEGIN PRIVATE KEY-----
+      MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC80EvILfn3Zszy
+      Edg221tFlsGAcGCW3cDTrjdhn/DvPXCZXpkg632QpmDFxsQENu0JSRj6isYAKP0M
+      083mN5PXhwHTtRGJfllBpxj53x3n0UmzXnM0+lwfIXAsPOTpJ/c1TtZ47HCzFxRS
+      4o37Hlcq+5Cvpa88QMdk+brUS65pcAhsa7IEUEw2rWRHkYmJb//9ibtAkugbXPYb
+      vOHyhIykuC3mp1cIVRe5d64elsc8tOAAw7Q6niIDotWBnOyPAzLgCzC3ndrSwB+h
+      NoPNejnPCYdHmZzr7w8DTgrsKaZK1gwNyzYZ69RO2lIXZyi41KKgM4qRN5NJRvC5
+      fbxntB4RAgMBAAECggEAMLxDE0RqxOUP+VuJx38PLAMhpxlalRZf80OAn/48nkPp
+      kGzOcaTXIEMRr3sClWPoAwGPJPw0502tI2Z4OvgVfQgn/JE8GZU3TK7oz3Y7rd5j
+      e5zhd8c3iAGFhqWhIF1kfan/ye6dmFxYrpwzsaG/NiUAz5WgiZje3r1m7+0o86W5
+      tGLCsmmLqGaopVqzYANJf+rrPYz76nhaKuBHkgOhLxJmtjjfh0xc2ufVXugVAjpE
+      h1dbRPOeUm5p/xd9FxKpMynHDRdcOgxBADe1Zw6DN++43Rjs4/odC9fP+gs9JEVO
+      qk1m14DECEfi5dVv3jbTSHnnWrDhOtjCnGsLPSXdAQKBgQDkAh0781efwJCkMUZ6
+      iDMdgSnnbBfCdB4IecZSTr+ZDzUAFgsQ4kHby8oxIhBnK/N9ZRKhbKb9YjcTDSUC
+      uLPDnBcPHJSyNc1Oi/B+v4R0mgReGX8raqPvTjJYscGvAe9QoiQPC/Eb/o7B0v3I
+      VJdYP4q6SMNX2bau5/5kunk+iQKBgQDT/l3Zzyq0TSfu8MWRt9RwofW5MBDykg4B
+      veSbG0a/2MW9ZJ+TsNJWwZkk/Qw31e1KnLj2xb/i2/JSM42U/VvXDelxlrOLBU1z
+      fWHHz/leM3ZZHGZxy0gU5xi7lTg3dWrlEvgR2pdzWWBmWfTxb/E8lhfllQbJg6F8
+      wtK0HBzBSQKBgBl+owYxD3stbP7vA5Jv6EdESgs2avGzSihodWR+qa3TpXl8/X/F
+      zNdm0hTsWikvIOrEgnDKVWG/uajHr3u+a1tT+MAX0gibO3ms7BdAEu92yUY8U5vn
+      MK1xcO+58I5BCSFa/+0uyKb4r728eeQMkV+suzZZLH6GOYcVKbzZnPUBAoGADJsO
+      h5obBvejjUDB7sVIm53115o1F8d5j77z7gk0Lso8D+QA3S5hg4klix6E8HkHEC27
+      jej6XQoJIbwxCg/6uxH3tKpqaLTbAygMfW4vfNuAiRH4QYH9+kg3n0fjPOD9hzuW
+      hrFB2jkRU2S7/PNUG+8s4pj2+1qZaqrHDrCxQQkCgYEAwWKhMK4/l9UtQVgh9d6Z
+      bQMM465w7VSV8PhBzaKenYh4D96H2ykFjLT91aqspdlccXYrDhVlPls2cFjtNFYf
+      OiBM7lBVoaQMrlJknuCMc+5Fq0QymB6IU9hsin+yzBsY/y0sBxcLdxMGgsC44cAL
+      ZAlveOzlJNHsfEAkNi4Dpuo=
+      -----END PRIVATE KEY-----
+    backoffice-public-key: |-
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnOV2bjOriXFRnf2FQmma
+      8Erv2Zfwq6fO0miUgq5luHj5AMVD5JpSNuFKeY+TbuATDVr2b8zEey0KR2EkSSu5
+      9xrG1dkOUvra/1TG7xGSNeE/8OpUXLypJIr4BTf478bd6rr5e71jzPfGCuqxH7Ud
+      i1avh8WHbnssRSa59U8hiA419n+OD2n//IeoFcQXyIeuNzQkO8igEaKRoc0JkT9h
+      MMwZNI5DN4CCSxLI/SfKagFPoC6PQTfbt/AWC7X4nuffpXFEY427SzAyJJ33paYO
+      zXfyC3nSuLsKgaDdHAgZ+LFLZ/fLCn9FLdtr1bJvKRrKGl+hDANEDkFcJZQv0uq7
+      GQIDAQAB
+      -----END PUBLIC KEY-----
+    backoffice-private-key: |-
+      -----BEGIN PRIVATE KEY-----
+      MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCc5XZuM6uJcVGd
+      /YVCaZrwSu/Zl/Crp87SaJSCrmW4ePkAxUPkmlI24Up5j5Nu4BMNWvZvzMR7LQpH
+      YSRJK7n3GsbV2Q5S+tr/VMbvEZI14T/w6lRcvKkkivgFN/jvxt3quvl7vWPM98YK
+      6rEftR2LVq+HxYdueyxFJrn1TyGIDjX2f44Paf/8h6gVxBfIh643NCQ7yKARopGh
+      zQmRP2EwzBk0jkM3gIJLEsj9J8pqAU+gLo9BN9u38BYLtfie59+lcURjjbtLMDIk
+      nfelpg7Nd/ILedK4uwqBoN0cCBn4sUtn98sKf0Ut22vVsm8pGsoaX6EMA0QOQVwl
+      lC/S6rsZAgMBAAECggEAIJUelSAx3WclFfRSOkqIHKLTUJLXLi65KsUBImppQXgN
+      7fUJdm396Nu8haYlbf8mtb1QNEOIAjSGT/CCgpeMFR8Ab+SVrvHdjOzkKz2w6XOP
+      vc5MGr4rOiWKADtxfQoFh/uwV9wq36QNArNeeUE5k3g7F60TxQPbW7kBIUp/oitM
+      xSdWA3Fs3tlVkda/34aY4I6PiMPhQDT5J557Z6nvRzA+uaO/Lxi7yVeno7jEnID3
+      ++F5d26QAl/OAcGWuJoc0TYLtBBlmQ1uft4DzyiMUlaPQNh2cc7GhK9/c2JBnLH7
+      H90V6rHO7T5beAtyi+zRMJtVC8L7sPKp/0qmSLlgAQKBgQDve73xAF5268N8JPjC
+      ZPgwTgnCT7Jf4mZAz/uNBKbSpnnRP4YiPYdfInUW9vcnNMzYc0TmoQEmRoMlIv75
+      WKyT0Adg8vCGkIWqw4U9O/jY81/FJvBJ/4btXR+2kMUITsUmMDDlXILa+yDz4OnT
+      bhSrVVuaWRSaINdMOZBcnf4aAQKBgQCnt5W6MvttrGTWEjG9LPdGs5GIfqnBjlVO
+      lsM/Q7OzRfnW6byvueiuWVf324WdDUx1IMWYDmZ+89sCG/9n0KfDjSFqkRPmyskV
+      kzIvDGlRLz+IbpFyj3+SfNWkI3m/tffi0pOp6BNVCUkIXpb6KsP23cJsqiD4oOPH
+      4bHvgiAxGQKBgElTF+sMc9/xe98s6sWKaLtRiYdnI3RcO3aot5qLzBA/TJkW3Bjr
+      weENCdDIORBWCEpVsMj0jweLG2hpeKwbzGtNjJTQjXiGE4cfalI/ZIf4rGAO9g+S
+      H1vZ4XXiiZFrnM1+f9oaIy6tKX/CY5WK5OU4s11k3Pv8Bi+eiGbzMPQBAoGBAKLe
+      Gp5Yx+S3Fqzzui11LyQPWPJt3jfCGoFY0n3rJuSevYHANaWIKba1uEFPgi8DLQ5J
+      JtkEkvARqsofmiSccW3q7VppTCRBJIi5CnC54sQd19qLVN8lDsOYSnc8pAxRj0lL
+      KG5EmhFoFO31vTNuuCJRM28Gv0HyK4B9Yaeue8hxAoGAYLMvX1ZErVvwo/V/Go/3
+      AQOMvfcW9cBSeRZTB0gwV9FL2D2Wq5vuZS8mGAS1pQsJvhaxmNUvg42tNyQmPpk3
+      JOE1vRA0e+NOq61drjW8K4a/K2DH5OUU5l2P/SfFVr47DrphtlPSB3KorkqqiWoS
+      uenhLdc1Lo0hNyj4U9hedD0=
+      -----END PRIVATE KEY-----
+
+  database:
+    public-key: |-
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArZ2CexA3axAHOyzeL1hp
+      B2XfTlQmfH2l3Kx+CpHnkbvt16CFMQqD1DsCKsh0m9KmG/cqHyZqdcpmovEH/Hfv
+      k0n22lIGySQqMva/hLomv8YOJATVjqxScRRy84T4tbqmQ6iuUJcbfynw5PTX0eTV
+      q/5GIs3B9eMSYwW2JYz2KOHHyzJRHczCf2HxrsVftq5aY5ue0XNPvznERFNjizkN
+      xSOHVWwM/rMysHsTcFxpv3vyb3gRFPd7u4aWSviKe3sVtQIfcNDYK+JHNWMtGJ3H
+      XIUYQ0AI9OTd61p2ny5VPAbsiqOMbqm6uXPsE6j/7b9jeu8q+v3I2OvLpGX2EEse
+      WwIDAQAB
+      -----END PUBLIC KEY-----
+    private-key: |-
+      -----BEGIN PRIVATE KEY-----
+      MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCtnYJ7EDdrEAc7
+      LN4vWGkHZd9OVCZ8faXcrH4KkeeRu+3XoIUxCoPUOwIqyHSb0qYb9yofJmp1ymai
+      8Qf8d++TSfbaUgbJJCoy9r+Euia/xg4kBNWOrFJxFHLzhPi1uqZDqK5Qlxt/KfDk
+      9NfR5NWr/kYizcH14xJjBbYljPYo4cfLMlEdzMJ/YfGuxV+2rlpjm57Rc0+/OcRE
+      U2OLOQ3FI4dVbAz+szKwexNwXGm/e/JveBEU93u7hpZK+Ip7exW1Ah9w0Ngr4kc1
+      Yy0YncdchRhDQAj05N3rWnafLlU8BuyKo4xuqbq5c+wTqP/tv2N67yr6/cjY68uk
+      ZfYQSx5bAgMBAAECggEALJZaDz7f7KgGI2VnfmNHPfYkvloQNEKUmTLXf+Fuxles
+      QodgDXM03gl1igVHJUmZDW+RqsRT7QJZD5m1QlqO9ZW2RuVwBrI6ADKshurDztaP
+      hSKUsfqBhbcJuo64zPstfgzRD7NvBV6BFlvnHWmWkoBQBNow6PQzIaky2Tv1cBP3
+      zHgnRiJy6wg8oSr4lfCMRG++PVWlqoGHpIgycGSAwIwDxarFuCLnVQHbbsgzHu2c
+      HBkdlCXxgyZZRlzHS/cA4w59GbuILqjI5C3uJp/WZv0KpExE2fwTzsKSoTxlTODo
+      hdN5y5tgLkkn/Z1aR6mN2uNMk0K/GMw7TkY+7Xo8UQKBgQDW0qLQc55FF+EDI1Pw
+      AX4qwTL0OJGWcITCWnpim54Ay2uARF095iGfrMZUjU8IJ4hRxstHAUcLFERo0akd
+      j51TKLUlU14qw05wH4uTBmh4BxcR+g5wVpmjBUBtSx/X/GdnAv77qLlOsrsBERWC
+      gCu2bQzFyeaxTCNVzoyLSjrRGQKBgQDO5NGUMKhd9TaPVsbf9YoyJPDwHv2DN9+z
+      I8j86VrwLp91Y8rIqdxPKfTVgn1Ia0TJp4P8W3UYfp6SdSg4HbR3i+ZGyRF8kPIH
+      CwfT6/Ci3q2nWt6AYojlCmrfLywA9pTWiuHxmVc607Po4ldChPUK8GPHqw315aZ2
+      3KetXg4VkwKBgQCBnucO0DSXjCkBM7faAYyXT6vnIJr4Izx36RAfn7Ze1F8xLg70
+      4n83UZD6Q6mEShY/Aax2U5cCYGBGvvtEEvviyZVDyGHxe5dAoEgflqZChkStXCyK
+      LDbX3rtZNxMnx+y8g1pHjy8BBWdA5YYNEDlQAczLK2A/aqmHhPHYuhlzQQKBgQCp
+      V60bSIBm93DC/lolsgp9ZLM5N4R1ROR68k1uhWqDsQWfxiCTAkVrHoJhyD7XacWR
+      8OUdR5aeh/UvF2nmFJpER2QiiC0h8lnH3gV4NmRuSymEE+KO3xgBsPcs2qV/3FST
+      DnZFlCdL5UAa3DhkIAOaAo0JPz9cB66rF4y/YH7StQKBgQC2G/S153ohkU/3GNiw
+      yg8EcmF5gTJihOCQrTACNBf9Aiwh+6EIhcWTP+7ZbPtfYtjdikJHBm61P37KO+Yl
+      qxazD6lakLQ04R7eVoWDhG2UVQoueWAgKJtemaGYIL/HmmeVHrrwogQyeg3h+lWz
+      8c9YRVzaY0D9Lt1zL74ezyLz1Q==
+      -----END PRIVATE KEY-----
+
+  http:
+    public-key: |-
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgPiyql0hrNEXR3/orHqx
+      5g756IcX9ReZX8WQIF7hIB67OH6No1XDLx/tc4DWmVaBfy9GN9WkWNp7mxvUMf6c
+      3mugcMme+4UTTt704lygIFDO+VjpclisIAL1tI+IjQ14mBK/On6pvGL57pAfqi9k
+      h+3OsJLfsp3bYTPjMr/P+FHEx4/c2v+jQPps8lOsu07WnB8aLm/6E32xST/wRMTZ
+      YpRfm4LDyN9STmka0e/s9JoQnBAo72MTmfMlyE5nRDxs4J/shdhHdSw+arKR2FYp
+      KWNk2FHT35+ADh0uO/hjupGWS8DXGG5fw8m8SnNgezeqDXZ2ypHABqsHcqqoWDwH
+      cwIDAQAB
+      -----END PUBLIC KEY-----
+    private-key: |-
+      -----BEGIN PRIVATE KEY-----
+      MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCA+LKqXSGs0RdH
+      f+iserHmDvnohxf1F5lfxZAgXuEgHrs4fo2jVcMvH+1zgNaZVoF/L0Y31aRY2nub
+      G9Qx/pzea6BwyZ77hRNO3vTiXKAgUM75WOlyWKwgAvW0j4iNDXiYEr86fqm8Yvnu
+      kB+qL2SH7c6wkt+yndthM+Myv8/4UcTHj9za/6NA+mzyU6y7TtacHxoub/oTfbFJ
+      P/BExNlilF+bgsPI31JOaRrR7+z0mhCcECjvYxOZ8yXITmdEPGzgn+yF2Ed1LD5q
+      spHYVikpY2TYUdPfn4AOHS47+GO6kZZLwNcYbl/DybxKc2B7N6oNdnbKkcAGqwdy
+      qqhYPAdzAgMBAAECggEAIteNJPs+ArsGB/nlONt4vgcjuo7siPkUJUxxMF2RgiTr
+      PUrrJsofjdaZRo/y6b/2Ag8acDEWUi7MH8432D3J0UjQMkg13AtKeQ9ApvqRA8nw
+      8Gn1vz93WLqT+HCiWkDeaG8AHGRlpJA0px9mfoqJJTO4l/lF17JPtwXWhjpNi+7d
+      KfHHwJ7m2QPnWt1/GsW/+L5qIlcVvDeoSVspXflk6K4+NV8FDN/oLcMYGyhbJ8lt
+      zrRIYdug52C9AyDw7EHL7NZ0XYlRKN4GTkF5BgzUf+OIc5x3yMlJvs72/t6dNgvN
+      6q53fut8bs2LmlFqHAa2OQWsVGPnvD0ilVJyyladsQKBgQDwS4riHaKmAiSxLkac
+      GobCVVDLbhrMCAOqkvqomc/KJz7CqVM6vGH/FFgWp5dSBekj8SF53lHiLhjwYxFh
+      Ef8g36HG+hO79T16ykfcjgyF484KXX0n2QrSeg22r4WoR5gLT75K8r5Ht+Fe5kj4
+      i9DS1XnykC4cI7RKHeZ4mueOOQKBgQCJZpAUzceIQd/6y/oQ5h2QznTZsXcsHg0R
+      pJhStnD5+cY1WfwkKyTGt5jkJizY352+NVlRs54DuuugUreB3OQRC2mPohjrMCE1
+      tKJMumu5f+lMcBa3Qb8qebhPT6Nxruhse6K8/84XdsagKnG90P8iweKdcanPD0TH
+      Rb4nxpBDCwKBgQDeL5uNlIVuJpEy220irkxoqGZ6k6ZnfgmV0S3Ac+h0LXGUoOh6
+      aPHb4D3LRM9gYmK+fxnLC8x+7MzWiWPqc6+J//4gc9+Hbi2Yui1UPGxL6OX9I5C0
+      JbYiBAVmJEnb3ccyvltgBa/3tIjJLPnQB8fhCs8lgDeCgWkVFyyh2+m70QKBgEqJ
+      OOAQQY3JLpf+z0kbjC5h0UHG478rDivj/j3geqkgtkV66y0zul+SeX5Kt0lvBUOJ
+      7UpFBhM/81KljKcGDTKx3jHs3Ve4ZEueEe1Ns+KNYSH2LFx9bha8sR9VNHUXTT6M
+      U1vz6PkRle6NF+bA2achRq3iWxvYTJdNXjp1nQzBAoGBAJw8hdvpmdu3YvzZ2iLv
+      OsL8pmXpb6C9HGDcH14acqjinZXCZiWont8FjeEkeWLLiye1lFfeDSjBsleADzCn
+      8YPDn4jzgkHzZ5R5l+JUDOgvkPrr3mSRxjNMMZQlbWL6v9NeqMrC0q/RIH8Pv2VR
+      z3DwIvuswwFlUyWjm42jT2ws
+      -----END PRIVATE KEY-----
+
+---
+spring:
+  config:
+    activate:
+      on-profile: default
+    import: optional:file:./local.yml, optional:file:.local.properties

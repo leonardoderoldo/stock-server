@@ -1,0 +1,46 @@
+package br.com.stock.server.domain.workflow
+
+const val CREATE_RESTAURANT_ADDRESS_QUALIFIER = "CREATE_RESTAURANT_ADDRESS"
+const val CREATE_RESTAURANT_ACCOUNT_BANKING_QUALIFIER = "CREATE_RESTAURANT_ACCOUNT_BANKING"
+const val ANSWER_INVITE_QUALIFIER = "ANSWER_INVITE"
+const val CUSTOMER_ADD_PHONE_QUALIFIER = "CUSTOMER_ADD_PHONE"
+const val ACCEPT_RESTAURANT_TERMS_QUALIFIER = "ACCEPT_RESTAURANT_TERMS"
+
+enum class WorkflowStep(
+    val qualifier: String,
+    val roles: Set<String>,
+) {
+    ACCPECT_RESTAURANT_TERMS(
+        ACCEPT_RESTAURANT_TERMS_QUALIFIER,
+        setOf(
+            "ROLE_EMPLOYEE_RELATION_OWNER",
+            "ROLE_EMPLOYEE_JOB_FUNCTION_OWNER",
+        ),
+    ),
+    CREATE_RESTAURANT_ADDRESS(
+        CREATE_RESTAURANT_ADDRESS_QUALIFIER,
+        setOf(
+            "ROLE_EMPLOYEE_RELATION_OWNER",
+            "ROLE_EMPLOYEE_JOB_FUNCTION_OWNER",
+        ),
+    ),
+    CREATE_RESTAURANT_ACCOUNT_BANKING(
+        CREATE_RESTAURANT_ACCOUNT_BANKING_QUALIFIER,
+        setOf(
+            "ROLE_EMPLOYEE_RELATION_OWNER",
+            "ROLE_EMPLOYEE_JOB_FUNCTION_OWNER",
+        ),
+    ),
+    CUSTOMER_ADD_PHONE(
+        CUSTOMER_ADD_PHONE_QUALIFIER,
+        setOf(
+            "ROLE_CUSTOMER",
+        ),
+    ),
+    ANSWER_INVITE(
+        ANSWER_INVITE_QUALIFIER,
+        setOf(
+            "ROLE_CUSTOMER",
+        ),
+    ),
+}

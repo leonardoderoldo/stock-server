@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  postgres:
+    container_name: postgres_stock_server
+    image: postgres:15.1-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=stock-server
+      - POSTGRES_PASSWORD=stock-server
+      - POSTGRES_DB=stock-server
+      - PGDATA=/var/lib/postgresql/data/stock_server/pgdata
+
+#  app:
+#    container_name: app_stock_server
+#    image: stock_server:latest
+#    ports:
+#      - "8080:8080"
+#      - "5005:5005"
+#    environment:
+#      SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/stock-server"
+#      APP_EMAIL_ENABLED: "false"
+#      AWS_ACCESS_KEY_ID: "AWS_ACCESS_KEY_ID"
+#      AWS_SECRET_KEY: "AWS_SECRET_KEY"
+#      AWS_REGION: "us-east-1"
+#      APP_XMS: 3072
+#      APP_XMX: 3072
+#      APP_METASPACE_SIZE: 512
+#      APP_MAX_METASPACE_SIZE: 512

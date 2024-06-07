@@ -1,0 +1,8 @@
+app:
+  email:
+    enabled: true
+    from: no-reply@deroldo.com.br
+    to: no-reply@deroldo.com.br
+
+  frontend:
+    url: http://localhost:3333
